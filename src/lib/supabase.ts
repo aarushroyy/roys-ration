@@ -45,6 +45,16 @@ export const dbOperations = {
     return data
   },
 
+
+  deleteItem: async (itemId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('ration_items')
+      .delete()
+      .eq('id', itemId)
+
+    if (error) throw error
+  },
+
   clearList: async (): Promise<void> => {
     const { error } = await supabase
       .from('ration_items')

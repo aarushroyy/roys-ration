@@ -4,7 +4,6 @@ import { dbOperations } from '@/lib/supabase'
 import { RationItem, FamilyMember, Screen } from '@/types'
 import { DeleteModal } from './DeleteModal'
 
-
 export const FamilyRationApp: React.FC = () => {
   const [screen, setScreen] = useState<Screen>('profiles')
   const [currentUser, setCurrentUser] = useState<FamilyMember | null>(null)
@@ -17,7 +16,6 @@ export const FamilyRationApp: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Load initial data and set up real-time subscription
   useEffect(() => {
     let isMounted = true
 
@@ -29,7 +27,7 @@ export const FamilyRationApp: React.FC = () => {
         ])
         
         if (isMounted) {
-          console.log('Loaded items:', itemsData) // Debug log
+          console.log('Loaded items:', itemsData)
           setItems(itemsData)
           setFamilyMembers(membersData)
         }
@@ -48,7 +46,7 @@ export const FamilyRationApp: React.FC = () => {
 
     const cleanup = dbOperations.subscribeToChanges((newItems) => {
       if (isMounted) {
-        console.log('Received new items:', newItems) // Debug log
+        console.log('Received new items:', newItems)
         setItems(newItems)
       }
     })
@@ -63,19 +61,30 @@ export const FamilyRationApp: React.FC = () => {
     if (!newItem.trim() || !currentUser) return
 
     try {
-      const addedItem = await dbOperations.addItem({
+      const itemToAdd = {
         name: newItem,
-        quantity: quantity || '1',
-        addedBy: currentUser.name
-      })
-      console.log('Added item:', addedItem) // Debug log
+        addedBy: currentUser.name,
+        ...(quantity.trim() ? { quantity: quantity } : {})
+      }
+      
+      const addedItem = await dbOperations.addItem(itemToAdd)
+      console.log('Added item:', addedItem)
       setNewItem('')
       setQuantity('')
-      // Refresh the list after adding
       const updatedItems = await dbOperations.getItems()
       setItems(updatedItems)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add item')
+    }
+  }
+
+  const deleteItem = async (itemId: string) => {
+    try {
+      await dbOperations.deleteItem(itemId)
+      const updatedItems = await dbOperations.getItems()
+      setItems(updatedItems)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete item')
     }
   }
 
@@ -91,8 +100,6 @@ export const FamilyRationApp: React.FC = () => {
       setIsDeleting(false)
     }
   }
-
-  
 
   if (isLoading) {
     return (
@@ -197,7 +204,7 @@ export const FamilyRationApp: React.FC = () => {
         </div>
       )}
 
-    {screen === 'list' && (
+      {screen === 'list' && (
         <div className="max-w-2xl mx-auto">
           <h1 className="text-3xl font-bold text-center mb-8 text-gray-900">Ration List</h1>
           <div className="space-y-4">
@@ -222,6 +229,13 @@ export const FamilyRationApp: React.FC = () => {
                           Added by <span className="font-medium">{item.added_by}</span>
                         </div>
                       </div>
+                      <button
+                        onClick={() => deleteItem(item.id)}
+                        className="p-2 text-gray-500 hover:text-red-600 transition-colors"
+                        aria-label="Delete item"
+                      >
+                        <Trash2 size={24} />
+                      </button>
                     </div>
                   </div>
                 ))}
